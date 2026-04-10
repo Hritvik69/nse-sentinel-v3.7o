@@ -167,7 +167,9 @@ def activate(cutoff: date) -> int:
             with _ALL_DATA_LOCK:
                 _all_data_backup.clear()
                 for ticker, df in list(ALL_DATA.items()):
-                    _all_data_backup[ticker] = df      # store original
+                    # BUG FIX: Store a copy, not a reference — in-place mutations
+                    # elsewhere would otherwise silently corrupt the backup.
+                    _all_data_backup[ticker] = df.copy() if df is not None else None
                     if df is None or df.empty:
                         continue
                     trimmed = truncate_df(df, cutoff)
