@@ -176,8 +176,16 @@ def activate(cutoff: date) -> int:
                         count += 1
 
             # ── Monkey-patch get_df_for_ticker ────────────────────────
+            # Patch both the module attribute AND the __init__ re-export so
+            # that code using `from strategy_engines import get_df_for_ticker`
+            # (e.g. battle_mode_engine) also receives the time-travel version.
             try:
                 _eu.get_df_for_ticker = _time_travel_get_df
+            except Exception:
+                pass
+            try:
+                import strategy_engines as _se_pkg
+                _se_pkg.get_df_for_ticker = _time_travel_get_df
             except Exception:
                 pass
 
@@ -203,9 +211,14 @@ def restore() -> None:
                     ALL_DATA[ticker] = df
                 _all_data_backup.clear()
 
-            # ── Restore original get_df_for_ticker ────────────────────
+            # ── Restore original get_df_for_ticker (both bindings) ────
             try:
                 _eu.get_df_for_ticker = _original_get_df
+            except Exception:
+                pass
+            try:
+                import strategy_engines as _se_pkg
+                _se_pkg.get_df_for_ticker = _original_get_df
             except Exception:
                 pass
 
