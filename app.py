@@ -41,7 +41,8 @@ from strategy_engines import (
 from strategy_engines._engine_utils import preload_history_batch
 
 try:
-    from strategy_engines.app_sector_screener_dashboard import (
+    # BUG FIX: This file is at root level, NOT inside strategy_engines package.
+    from app_sector_screener_dashboard import (
         render_sector_screener_dashboard,
     )
     _SECTOR_SCREENER_UI_OK = True
@@ -49,7 +50,8 @@ except ImportError:
     _SECTOR_SCREENER_UI_OK = False
 
 try:
-    from strategy_engines.csv_next_day_engine import run_csv_next_day
+    # BUG FIX: This file is at root level, NOT inside strategy_engines package.
+    from csv_next_day_engine import run_csv_next_day
     _CSV_NEXT_DAY_ENGINE_OK = True
 except ImportError:
     _CSV_NEXT_DAY_ENGINE_OK = False
