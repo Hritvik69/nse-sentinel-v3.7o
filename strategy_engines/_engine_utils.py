@@ -114,13 +114,20 @@ def preload_history_batch(
 
 
 def get_df_for_ticker(ticker: str) -> pd.DataFrame | None:
-    """Return preloaded DF for a ticker, with fallback to live download."""
+    """Return preloaded DF for a ticker, with fallback to live download.
+    Caches the fallback result in ALL_DATA to prevent repeated API calls.
+    """
     ticker_ns = ticker if ticker.endswith(".NS") else f"{ticker}.NS"
     with _ALL_DATA_LOCK:
         df = ALL_DATA.get(ticker_ns)
     if df is not None:
         return df
-    return download_history(ticker_ns, period="6mo")
+    # BUG FIX: Cache the fallback result so subsequent calls don't re-download.
+    fetched = download_history(ticker_ns, period="6mo")
+    if fetched is not None:
+        with _ALL_DATA_LOCK:
+            ALL_DATA[ticker_ns] = fetched
+    return fetched
 
 
 def add_rank_score_columns(df: pd.DataFrame) -> pd.DataFrame:
