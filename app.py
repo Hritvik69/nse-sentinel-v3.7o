@@ -195,7 +195,6 @@ def _aura_fetch(symbol: str) -> "pd.DataFrame | None":
         df = get_df_for_ticker(ticker_ns)
         if df is not None and len(df) >= 10:
             return _cut(df)
-            return _cut(df) if cutoff else df
     except Exception:
         pass
 
@@ -3379,14 +3378,20 @@ if csv_scan_clicked or _csv_panel_open:
         st.warning("CSV next-day engine is not available. Check `data_downloader.py` and `csv_next_day_engine.py`.")
     else:
         if csv_scan_clicked:
+            # 🕰️ Pass TT cutoff so CSV engine slices data before computing indicators
+            _csv_tt_cut = st.session_state.get("tt_date_val")  # None in live mode
             with st.spinner("📂 Scanning local CSVs …"):
                 try:
-                    _csv_fresh_df = run_csv_next_day(None)
+                    _csv_fresh_df = run_csv_next_day(None, cutoff_date=_csv_tt_cut)
                     st.session_state["csv_next_day_results_df"] = (
                         _csv_fresh_df.copy() if isinstance(_csv_fresh_df, pd.DataFrame) else pd.DataFrame()
                     )
                     st.session_state["csv_next_day_last_error"] = ""
-                    st.session_state["csv_next_day_last_scan_at"] = datetime.now().strftime("%d %b %Y, %H:%M")
+                    _ts_label = (
+                        _csv_tt_cut.strftime("%d %b %Y (TT)")
+                        if _csv_tt_cut else datetime.now().strftime("%d %b %Y, %H:%M")
+                    )
+                    st.session_state["csv_next_day_last_scan_at"] = _ts_label
                 except Exception as _csv_err:
                     st.session_state["csv_next_day_last_error"] = str(_csv_err)
 
