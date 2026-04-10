@@ -933,16 +933,30 @@ def _get_csv_tickers() -> list[str]:
         return []
 
 
-def _build_row_from_csv(ticker_ns: str) -> dict | None:
+def _build_row_from_csv(ticker_ns: str, cutoff_date=None) -> dict | None:
     """
     Load the CSV for `ticker_ns`, compute the latest-day indicators,
     and return a partial row dict compatible with _enrich_row().
     Returns None if data is missing or insufficient.
+
+    cutoff_date : datetime.date | None
+        When set (Time Travel mode), slices the CSV to rows on or before
+        this date before any indicator computation. Zero future leakage.
     """
     try:
         df = load_csv(ticker_ns)
         if df is None or len(df) < 70:
             return None
+
+        # -- TIME TRAVEL: truncate CSV to cutoff before any computation --
+        if cutoff_date is not None:
+            try:
+                _tt_mask = pd.to_datetime(df.index).date <= cutoff_date
+                df = df.loc[_tt_mask]
+            except Exception:
+                pass  # fail-safe: continue with full data
+            if df is None or len(df) < 70:
+                return None
 
         df = df.tail(220).copy()
         features = _prepare_feature_frame(df)
@@ -995,7 +1009,7 @@ def _build_row_from_csv(ticker_ns: str) -> dict | None:
 # MAIN PUBLIC FUNCTION
 # ═══════════════════════════════════════════════════════════════════════
 
-def run_csv_next_day(df: pd.DataFrame | None) -> pd.DataFrame:
+def run_csv_next_day(df: pd.DataFrame | None, cutoff_date=None) -> pd.DataFrame:
     """
     CSV Next-Day Potential Engine — main entry point.
 
@@ -1046,7 +1060,7 @@ def run_csv_next_day(df: pd.DataFrame | None) -> pd.DataFrame:
             return pd.DataFrame()
 
         with ThreadPoolExecutor(max_workers=16) as ex:
-            futs = {ex.submit(_build_row_from_csv, t): t for t in csv_tickers}
+            futs = {ex.submit(_build_row_from_csv, t, cutoff_date): t for t in csv_tickers}
             for fut in as_completed(futs):
                 try:
                     result = fut.result()
