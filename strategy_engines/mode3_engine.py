@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from strategy_engines._engine_utils import (
-    safe, ema, rsi_vec, download_history, SKLEARN_OK,
+    safe, ema, rsi_vec, download_history, SKLEARN_OK, get_df_for_ticker,
 )
 if SKLEARN_OK:
     from sklearn.linear_model import LogisticRegression
@@ -116,7 +116,8 @@ def backtest_mode3(row: dict, ticker: str) -> float:
 
     result = 50.0
     try:
-        df = download_history(ticker_ns, "6mo")
+        # BUG FIX: Use get_df_for_ticker (respects TT patch) not download_history
+        df = get_df_for_ticker(ticker_ns)
         if df is None or len(df) < 40:
             raise ValueError("insufficient data")
 
