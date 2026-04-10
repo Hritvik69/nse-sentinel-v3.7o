@@ -206,6 +206,23 @@ def _build_battle_row(ticker_ns: str, mode: int) -> dict | None:
         if df is None or df.empty:
             return None
 
+        # ── 🕰️ TIME TRAVEL: truncate to cutoff for tickers that arrived via
+        # live fallback (not pre-snapshotted in ALL_DATA).  ALL_DATA entries
+        # are already truncated by time_travel_engine.activate(), but any
+        # ticker absent from the preload universe downloads fresh data — we
+        # must slice it here to prevent future-data leakage.
+        try:
+            import time_travel_engine as _tt_be
+            if _tt_be.is_active():
+                _tt_cut = _tt_be.get_reference_date()
+                if _tt_cut is not None:
+                    _tt_mask = pd.to_datetime(df.index).date <= _tt_cut
+                    df = df.loc[_tt_mask]
+                    if df.empty or len(df) < 25:
+                        return None
+        except Exception:
+            pass  # fail-safe: continue with whatever data we have
+
         # Normalise MultiIndex columns if present
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
@@ -632,4 +649,3 @@ def compute_battle_scores(df: pd.DataFrame) -> pd.DataFrame:
     except Exception:
         # Absolute fail-safe — return unchanged df
         return df
-        
